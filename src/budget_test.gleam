@@ -1,3 +1,4 @@
+import gleam/dynamic/decode
 import gleam/int
 import gleam/option
 import gleam/string
@@ -5,6 +6,12 @@ import rada/date as d
 
 pub type User {
   User(id: String, name: String)
+}
+
+fn user_decoder() -> decode.Decoder(User) {
+  use id <- decode.field("id", decode.string)
+  use name <- decode.field("name", decode.string)
+  decode.success(User(id:, name:))
 }
 
 pub type Category {
