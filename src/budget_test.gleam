@@ -23,21 +23,81 @@ pub type Category {
   )
 }
 
+pub fn category_decoder() -> decode.Decoder(Category) {
+  let category_decoder = {
+    use id <- decode.field("id", decode.string)
+    use name <- decode.field("name", decode.string)
+    use target <- decode.field("target", decode.optional(target_decoder()))
+    use inflow <- decode.field("inflow", decode.bool)
+    decode.success(Category(id, name, target, inflow))
+  }
+}
+
 pub type Target {
   Monthly(target: Money)
   Custom(target: Money, date: MonthInYear)
+}
+
+pub fn target_decoder() -> decode.Decoder(Target) {
+  let monthly_decoder = {
+    use money <- decode.field("money", money_decoder())
+    decode.success(Monthly(money))
+  }
+
+  let custom_decoder = {
+    use money <- decode.field("money", money_decoder())
+    use date <- decode.field("date", month_decoder())
+    decode.success(Custom(money, date))
+  }
+
+  let target_decoder = {
+    use tag <- decode.field("type", decode.string)
+    case tag {
+      "monthly" -> monthly_decoder
+      _ -> custom_decoder
+    }
+  }
+  target_decoder
 }
 
 pub type MonthInYear {
   MonthInYear(month: Int, year: Int)
 }
 
+pub fn month_decoder() -> decode.Decoder(MonthInYear) {
+  {
+    use month <- decode.field("month", decode.int)
+    use year <- decode.field("year", decode.int)
+    decode.success(MonthInYear(month, year))
+  }
+}
+
 pub type Allocation {
   Allocation(id: String, amount: Money, category_id: String, date: Cycle)
 }
 
+pub fn allocation_decoder() -> decode.Decoder(Allocation) {
+  let allocation_decoder = {
+    use id <- decode.field("id", decode.string)
+    use amount <- decode.field("amount", money_decoder())
+    use category_id <- decode.field("category_id", decode.string)
+    use date <- decode.field("date", cycle_decoder())
+    decode.success(Allocation(id, amount, category_id, date))
+  }
+  allocation_decoder
+}
+
 pub type Cycle {
   Cycle(year: Int, month: d.Month)
+}
+
+pub fn cycle_decoder() -> decode.Decoder(Cycle) {
+  let cycle_decoder = {
+    use month <- decode.field("month", decode.int)
+    use year <- decode.field("year", decode.int)
+    decode.success(Cycle(year, month |> d.number_to_month))
+  }
+  cycle_decoder
 }
 
 pub type Transaction {
@@ -50,9 +110,37 @@ pub type Transaction {
   )
 }
 
+pub fn transaction_decoder() -> decode.Decoder(Transaction) {
+  let transaction_decoder = {
+    use id <- decode.field("id", decode.string)
+    use date <- decode.field("date", decode.int)
+    use payee <- decode.field("payee", decode.string)
+    use category_id <- decode.field("category_id", decode.string)
+    use value <- decode.field("value", money_decoder())
+    decode.success(Transaction(
+      id,
+      d.from_rata_die(date),
+      payee,
+      category_id,
+      value,
+    ))
+  }
+  transaction_decoder
+}
+
 pub type Money {
   //s - signature, b - base
   Money(s: Int, b: Int, is_neg: Bool)
+}
+
+pub fn money_decoder() -> decode.Decoder(Money) {
+  let money_decoder = {
+    use s <- decode.field("s", decode.int)
+    use b <- decode.field("b", decode.int)
+    use is_neg <- decode.field("is_neg", decode.bool)
+    decode.success(Money(s, b, is_neg))
+  }
+  money_decoder
 }
 
 pub fn money_sum(a: Money, b: Money) -> Money {
