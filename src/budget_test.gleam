@@ -8,7 +8,7 @@ pub type User {
   User(id: String, name: String)
 }
 
-fn user_decoder() -> decode.Decoder(User) {
+pub fn user_decoder() -> decode.Decoder(User) {
   use id <- decode.field("id", decode.string)
   use name <- decode.field("name", decode.string)
   decode.success(User(id:, name:))
@@ -24,7 +24,7 @@ pub type Category {
 }
 
 pub fn category_decoder() -> decode.Decoder(Category) {
-  let category_decoder = {
+  {
     use id <- decode.field("id", decode.string)
     use name <- decode.field("name", decode.string)
     use target <- decode.field("target", decode.optional(target_decoder()))
@@ -107,25 +107,27 @@ pub type Transaction {
     payee: String,
     category_id: String,
     value: Money,
+    user_id: String,
   )
 }
 
 pub fn transaction_decoder() -> decode.Decoder(Transaction) {
-  let transaction_decoder = {
+  {
     use id <- decode.field("id", decode.string)
     use date <- decode.field("date", decode.int)
     use payee <- decode.field("payee", decode.string)
     use category_id <- decode.field("category_id", decode.string)
     use value <- decode.field("value", money_decoder())
+    use user_id <- decode.field("user_id", decode.string)
     decode.success(Transaction(
       id,
       d.from_rata_die(date),
       payee,
       category_id,
       value,
+      user_id,
     ))
   }
-  transaction_decoder
 }
 
 pub type Money {
