@@ -1,3 +1,4 @@
+// import gleam/json
 import gleam/dict
 import gleam/dynamic/decode
 import gleam/int
@@ -32,6 +33,7 @@ pub type Category {
     name: String,
     target: option.Option(Target),
     inflow: Bool,
+    group_id: String,
   )
 }
 
@@ -47,9 +49,20 @@ pub fn category_decoder() -> decode.Decoder(Category) {
     use name <- decode.field("name", decode.string)
     use target <- decode.field("target", decode.optional(target_decoder()))
     use inflow <- decode.field("inflow", decode.bool)
-    decode.success(Category(id, name, target, inflow))
+    use group_id <- decode.field("group_id", decode.string)
+    decode.success(Category(id, name, target, inflow, group_id))
   }
 }
+
+// pub fn category_encode(cat: Category) -> json.Json {
+//   json.object([
+//     #("id", json.string(cat.id)),
+//     #("name", json.string(cat.name)),
+//     // #("target", json.nullable(cat.target, of: target_encode)),
+//     #("inflow", json.bool(cat.inflow)),
+//     #("group_id", json.string(cat.group_id)),
+//   ])
+// }
 
 pub type Target {
   Monthly(target: Money)

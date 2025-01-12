@@ -15,6 +15,7 @@ version = "1.0.0"
 [dependencies]
 gleam_stdlib = "~> 0.52.0"
 rada = { path = "../rada" }
+gleam_json = "~> 2.3.0"
 # rada = ">= 0.4.0 and < 1.0.0"
 
 [dev-dependencies]
