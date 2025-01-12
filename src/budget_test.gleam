@@ -1,3 +1,4 @@
+import gleam/dict
 import gleam/dynamic/decode
 import gleam/int
 import gleam/option
@@ -21,6 +22,10 @@ pub type Category {
     target: option.Option(Target),
     inflow: Bool,
   )
+}
+
+pub fn category_suggestions_decoder() -> decode.Decoder(dict.Dict(String, Category)) {
+  decode.dict(decode.string, category_decoder())
 }
 
 pub fn category_decoder() -> decode.Decoder(Category) {
@@ -251,10 +256,6 @@ fn sign_symbols(m: Money) -> String {
       }
     False -> ""
   }
-}
-
-pub fn is_neg(m: Money) -> Bool {
-  m.is_neg
 }
 
 pub fn is_zero(m: Money) -> Bool {
