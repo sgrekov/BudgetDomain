@@ -2,6 +2,7 @@
 import gleam/dict
 import gleam/dynamic/decode
 import gleam/int
+import gleam/io
 import gleam/option
 import gleam/string
 import rada/date as d
@@ -162,36 +163,20 @@ pub fn transaction_decoder() -> decode.Decoder(Transaction) {
 }
 
 pub type Money {
-  //s - signature, b - base
-  Money(s: Int, b: Int, is_neg: Bool)
+  //stored as cents
+  Money(value: Int)
 }
 
 pub fn money_decoder() -> decode.Decoder(Money) {
   let money_decoder = {
-    use s <- decode.field("s", decode.int)
-    use b <- decode.field("b", decode.int)
-    use is_neg <- decode.field("is_neg", decode.bool)
-    decode.success(Money(s, b, is_neg))
+    use value <- decode.field("money_value", decode.int)
+    decode.success(Money(value))
   }
   money_decoder
 }
 
 pub fn money_sum(a: Money, b: Money) -> Money {
-  let sign_a = case a.is_neg {
-    False -> 1
-    True -> -1
-  }
-  let sign_b = case b.is_neg {
-    False -> 1
-    True -> -1
-  }
-  let a_cents = { a.s * 100 + a.b } * sign_a
-  let b_cents = { b.s * 100 + b.b } * sign_b
-  Money(
-    { a_cents + b_cents } / 100 |> int.absolute_value,
-    { a_cents + b_cents } % 100 |> int.absolute_value,
-    { a_cents + b_cents } < 0,
-  )
+  Money(a.value + b.value)
 }
 
 pub fn calculate_current_cycle() -> Cycle {
@@ -221,41 +206,52 @@ pub fn cycle_increase(c: Cycle) -> Cycle {
 }
 
 pub fn divide_money(m: Money, d: Int) -> Money {
-  Money(m.s / d, m.b / d, m.is_neg)
+  Money(m.value / d)
 }
 
-pub fn int_to_money(i: Int) -> Money {
-  Money(i |> int.absolute_value, 0, i < 0)
+pub fn euro_int_to_money(i: Int) -> Money {
+  Money(i * 100)
 }
 
-pub fn negate(m: Money) -> Money {
-  Money(..m, is_neg: True)
-}
+// pub fn negate(m: Money) -> Money {
+//   Money(..m, is_neg: True)
+// }
 
-pub fn float_to_money(i: Int, c: Int) -> Money {
-  Money(i |> int.absolute_value, c, i < 0)
-}
+// pub fn positivate(m: Money) -> Money {
+//   Money(..m, is_neg: False)
+// }
+
+// pub fn float_to_money(i: Int, c: Int) -> Money {
+//   Money(i |> int.absolute_value, c, i < 0)
+// }
 
 pub fn string_to_money(raw: String) -> Money {
   let #(is_neg, s) = case string.slice(raw, 0, 1) {
-    "-" -> #(True, string.slice(raw, 1, string.length(raw)))
-    _ -> #(False, raw)
+    "-" -> #(-1, string.slice(raw, 1, string.length(raw)))
+    _ -> #(1, raw)
   }
   case string.replace(s, ",", ".") |> string.split(".") {
-    [s, b, ..] ->
+    [s, b, ..] -> {
+      // io.debug("s: " <> s)
+      // io.debug("b: " <> b)
       case
         int.parse(s),
         b |> string.pad_end(2, "0") |> string.slice(0, 2) |> int.parse
       {
-        Ok(s), Ok(b) -> Money(s, b, is_neg)
-        _, _ -> Money(0, 0, is_neg)
+        Ok(s), Ok(b) -> {
+          // io.debug("s2: " <> s |> int.to_string)
+          // io.debug("b2: " <> b |> int.to_string)
+          Money(is_neg * { s * 100 + b })
+        }
+        _, _ -> Money(0)
       }
+    }
     [s, ..] ->
       case int.parse(s) {
-        Ok(s) -> Money(s, 0, is_neg)
-        _ -> Money(0, 0, is_neg)
+        Ok(s) -> Money(is_neg * s * 100)
+        _ -> Money(0)
       }
-    _ -> Money(0, 0, is_neg)
+    _ -> Money(0)
   }
 }
 
@@ -265,32 +261,34 @@ pub fn money_to_string(m: Money) -> String {
 }
 
 pub fn money_to_string_no_sign(m: Money) -> String {
-  m.s |> int.to_string <> "." <> m.b |> int.to_string
+  m.value / 100 |> int.to_string <> "." <> m.value % 100 |> int.to_string
 }
 
 pub fn money_to_string_no_currency(m: Money) -> String {
   let sign = sign_symbols(m)
-  sign <> m.s |> int.to_string <> "." <> m.b |> int.to_string
+  sign
+  <> m.value / 100 |> int.to_string
+  <> "."
+  <> m.value % 100 |> int.to_string
+}
+
+pub fn money_with_currency_no_sign(m: Money) -> String {
+  "€" <> m.value / 100 |> int.to_string <> "." <> m.value % 100 |> int.to_string
 }
 
 fn sign_symbols(m: Money) -> String {
-  case m.is_neg {
-    True ->
-      case is_zero(m) {
-        True -> ""
-        False -> "-"
-      }
+  case m.value < 0 {
+    True -> "-"
     False -> ""
   }
 }
 
-pub fn is_zero(m: Money) -> Bool {
-  case m.s, m.b {
-    0, 0 -> True
-    _, _ -> False
+pub fn is_zero_euro(m: Money) -> Bool {
+  case m.value {
+    0 -> True
+    _ -> False
   }
 }
-
-pub fn is_zero_int(m: Money) -> Bool {
-  m.s == 0
-}
+// pub fn is_zero_int(m: Money) -> Bool {
+//   m.s == 0
+// }
