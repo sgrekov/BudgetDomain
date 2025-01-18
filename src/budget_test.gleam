@@ -261,19 +261,19 @@ pub fn money_to_string(m: Money) -> String {
 }
 
 pub fn money_to_string_no_sign(m: Money) -> String {
-  m.value / 100 |> int.to_string <> "." <> m.value % 100 |> int.to_string
+  let value = m.value |> int.absolute_value
+  value / 100 |> int.to_string <> "." <> value % 100 |> int.to_string
 }
 
 pub fn money_to_string_no_currency(m: Money) -> String {
   let sign = sign_symbols(m)
-  sign
-  <> m.value / 100 |> int.to_string
-  <> "."
-  <> m.value % 100 |> int.to_string
+  let value = m.value |> int.absolute_value
+  sign <> value / 100 |> int.to_string <> "." <> value % 100 |> int.to_string
 }
 
 pub fn money_with_currency_no_sign(m: Money) -> String {
-  "€" <> m.value / 100 |> int.to_string <> "." <> m.value % 100 |> int.to_string
+  let value = m.value |> int.absolute_value
+  "€" <> value / 100 |> int.to_string <> "." <> value % 100 |> int.to_string
 }
 
 fn sign_symbols(m: Money) -> String {
