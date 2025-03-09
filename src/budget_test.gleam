@@ -2,7 +2,6 @@
 import gleam/dict
 import gleam/dynamic/decode
 import gleam/int
-import gleam/io
 import gleam/option
 import gleam/string
 import rada/date as d
