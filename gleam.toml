@@ -1,4 +1,4 @@
-name = "budget_test"
+name = "budget_shared"
 version = "1.0.0"
 
 # Fill out these fields if you intend to generate HTML documentation or publish
@@ -12,11 +12,12 @@ version = "1.0.0"
 # For a full reference of all the available options, you can have a look at
 # https://gleam.run/writing-gleam/gleam-toml/.
 
+gleam = ">= 1.9.0"
+
 [dependencies]
-gleam_stdlib = "~> 0.52.0"
-rada = { path = "../rada" }
+gleam_stdlib = "~> 0.58.0"
 gleam_json = "~> 2.3.0"
-# rada = ">= 0.4.0 and < 1.0.0"
+rada = ">= 0.5.0 and < 1.0.0"
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
