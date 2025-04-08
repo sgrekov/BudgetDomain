@@ -1,13 +1,24 @@
-// import gleam/json
 import gleam/dict
 import gleam/dynamic/decode
 import gleam/int
+import gleam/json
 import gleam/option
 import gleam/string
 import rada/date as d
 
+pub fn id_decoder() -> decode.Decoder(String) {
+  {
+    use id <- decode.field("id", decode.string)
+    decode.success(id)
+  }
+}
+
 pub type User {
   User(id: String, name: String)
+}
+
+pub fn user_encode(u: User) -> json.Json {
+  json.object([#("id", json.string(u.id)), #("name", json.string(u.name))])
 }
 
 pub fn user_decoder() -> decode.Decoder(User) {
@@ -18,6 +29,14 @@ pub fn user_decoder() -> decode.Decoder(User) {
 
 pub type CategoryGroup {
   CategoryGroup(id: String, name: String, position: Int)
+}
+
+pub fn category_group_encode(group: CategoryGroup) -> json.Json {
+  json.object([
+    #("id", json.string(group.id)),
+    #("name", json.string(group.name)),
+    #("position", json.int(group.position)),
+  ])
 }
 
 pub fn category_group_decoder() -> decode.Decoder(CategoryGroup) {
@@ -54,15 +73,15 @@ pub fn category_decoder() -> decode.Decoder(Category) {
   }
 }
 
-// pub fn category_encode(cat: Category) -> json.Json {
-//   json.object([
-//     #("id", json.string(cat.id)),
-//     #("name", json.string(cat.name)),
-//     // #("target", json.nullable(cat.target, of: target_encode)),
-//     #("inflow", json.bool(cat.inflow)),
-//     #("group_id", json.string(cat.group_id)),
-//   ])
-// }
+pub fn category_encode(cat: Category) -> json.Json {
+  json.object([
+    #("id", json.string(cat.id)),
+    #("name", json.string(cat.name)),
+    #("target", json.nullable(cat.target, of: target_encode)),
+    #("inflow", json.bool(cat.inflow)),
+    #("group_id", json.string(cat.group_id)),
+  ])
+}
 
 pub type Target {
   Monthly(target: Money)
@@ -118,6 +137,63 @@ pub fn allocation_decoder() -> decode.Decoder(Allocation) {
   allocation_decoder
 }
 
+pub fn allocation_encode(a: Allocation) -> json.Json {
+  json.object([
+    #("id", json.string(a.id)),
+    #("amount", money_encode(a.amount)),
+    #("category_id", json.string(a.category_id)),
+    #("date", cycle_encode(a.date)),
+  ])
+}
+
+pub fn new_allocation_encode(
+  amount: Money,
+  cat_id: String,
+  cycle: Cycle,
+) -> json.Json {
+  json.object([
+    #("id", json.null()),
+    #("amount", money_encode(amount)),
+    #("category_id", json.string(cat_id)),
+    #("date", cycle_encode(cycle)),
+  ])
+}
+
+
+pub fn cycle_encode(cycle: Cycle) -> json.Json {
+  json.object([
+    #("year", json.int(cycle.year)),
+    #("month", cycle.month |> d.month_to_number |> json.int),
+  ])
+}
+
+pub fn target_encode(target: Target) -> json.Json {
+  case target {
+    Monthly(money) ->
+      json.object([
+        #("type", json.string("monthly")),
+        #("money", money_encode(money)),
+      ])
+    Custom(money, month) ->
+      json.object([
+        #("type", json.string("custom")),
+        #("money", money_encode(money)),
+        #("date", month_in_year_encode(month)),
+      ])
+  }
+}
+
+pub fn month_in_year_encode(month: MonthInYear) -> json.Json {
+  json.object([
+    #("month", json.int(month.month)),
+    #("year", json.int(month.year)),
+  ])
+}
+
+pub fn money_encode(money: Money) -> json.Json {
+  json.object([#("money_value", json.int(money.value))])
+}
+
 pub type Cycle {
   Cycle(year: Int, month: d.Month)
 }
@@ -159,6 +235,17 @@ pub fn transaction_decoder() -> decode.Decoder(Transaction) {
       user_id,
     ))
   }
+}
+
+pub fn transaction_encode(t: Transaction) -> json.Json {
+  json.object([
+    #("id", json.string(t.id)),
+    #("date", d.to_rata_die(t.date) |> json.int),
+    #("payee", json.string(t.payee)),
+    #("category_id", json.string(t.category_id)),
+    #("value", money_encode(t.value)),
+    #("user_id", json.string(t.user_id)),
+  ])
 }
 
 pub type Money {
