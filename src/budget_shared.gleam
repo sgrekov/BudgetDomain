@@ -146,19 +146,33 @@ pub fn allocation_encode(a: Allocation) -> json.Json {
   ])
 }
 
-pub fn new_allocation_encode(
-  amount: Money,
-  cat_id: String,
-  cycle: Cycle,
-) -> json.Json {
-  json.object([
-    #("id", json.null()),
-    #("amount", money_encode(amount)),
-    #("category_id", json.string(cat_id)),
-    #("date", cycle_encode(cycle)),
-  ])
+pub fn allocation_form_decoder() -> decode.Decoder(AllocationForm) {
+  let allocation_decoder = {
+    use id <- decode.field("id", decode.optional(decode.string))
+    use amount <- decode.field("amount", money_decoder())
+    use category_id <- decode.field("category_id", decode.string)
+    use date <- decode.field("date", cycle_decoder())
+    decode.success(AllocationForm(id, amount, category_id, date))
+  }
+  allocation_decoder
 }
 
+pub type AllocationForm {
+  AllocationForm(
+    id: option.Option(String),
+    amount: Money,
+    category_id: String,
+    date: Cycle,
+  )
+}
+
+pub fn allocation_form_encode(af: AllocationForm) -> json.Json {
+  json.object([
+    #("amount", money_encode(af.amount)),
+    #("category_id", json.string(af.category_id)),
+    #("date", cycle_encode(af.date)),
+  ])
+}
 
 pub fn cycle_encode(cycle: Cycle) -> json.Json {
   json.object([
