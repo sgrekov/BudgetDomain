@@ -313,18 +313,6 @@ pub fn euro_int_to_money(i: Int) -> Money {
   Money(i * 100)
 }
 
-// pub fn negate(m: Money) -> Money {
-//   Money(..m, is_neg: True)
-// }
-
-// pub fn positivate(m: Money) -> Money {
-//   Money(..m, is_neg: False)
-// }
-
-// pub fn float_to_money(i: Int, c: Int) -> Money {
-//   Money(i |> int.absolute_value, c, i < 0)
-// }
-
 pub fn string_to_money(raw: String) -> Money {
   let #(is_neg, s) = case string.slice(raw, 0, 1) {
     "-" -> #(-1, string.slice(raw, 1, string.length(raw)))
@@ -366,9 +354,8 @@ pub fn money_to_string_no_sign(m: Money) -> String {
 }
 
 pub fn money_to_string_no_currency(m: Money) -> String {
-  let sign = sign_symbols(m)
   let value = m.value |> int.absolute_value
-  sign <> value / 100 |> int.to_string <> "." <> value % 100 |> int.to_string
+  sign_symbols(m) <> value / 100 |> int.to_string <> "." <> value % 100 |> int.to_string
 }
 
 pub fn money_with_currency_no_sign(m: Money) -> String {
@@ -389,6 +376,3 @@ pub fn is_zero_euro(m: Money) -> Bool {
     _ -> False
   }
 }
-// pub fn is_zero_int(m: Money) -> Bool {
-//   m.s == 0
-// }
