@@ -21,10 +21,25 @@ pub fn user_encode(u: User) -> json.Json {
   json.object([#("id", json.string(u.id)), #("name", json.string(u.name))])
 }
 
+pub fn user_with_token_encode(u: User, t: String) -> json.Json {
+  json.object([
+    #("id", json.string(u.id)),
+    #("name", json.string(u.name)),
+    #("token", json.string(t)),
+  ])
+}
+
 pub fn user_decoder() -> decode.Decoder(User) {
   use id <- decode.field("id", decode.string)
   use name <- decode.field("name", decode.string)
   decode.success(User(id:, name:))
+}
+
+pub fn user_with_token_decoder() -> decode.Decoder(#(User, String)) {
+  use id <- decode.field("id", decode.string)
+  use name <- decode.field("name", decode.string)
+  use token <- decode.field("token", decode.string)
+  decode.success(#(User(id:, name:), token))
 }
 
 pub type CategoryGroup {
@@ -355,7 +370,10 @@ pub fn money_to_string_no_sign(m: Money) -> String {
 
 pub fn money_to_string_no_currency(m: Money) -> String {
   let value = m.value |> int.absolute_value
-  sign_symbols(m) <> value / 100 |> int.to_string <> "." <> value % 100 |> int.to_string
+  sign_symbols(m)
+  <> value / 100 |> int.to_string
+  <> "."
+  <> value % 100 |> int.to_string
 }
 
 pub fn money_with_currency_no_sign(m: Money) -> String {
