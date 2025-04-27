@@ -43,7 +43,7 @@ pub fn user_with_token_decoder() -> decode.Decoder(#(User, String)) {
 }
 
 pub type CategoryGroup {
-  CategoryGroup(id: String, name: String, position: Int)
+  CategoryGroup(id: String, name: String, position: Int, is_collapsed: Bool)
 }
 
 pub fn category_group_encode(group: CategoryGroup) -> json.Json {
@@ -51,6 +51,7 @@ pub fn category_group_encode(group: CategoryGroup) -> json.Json {
     #("id", json.string(group.id)),
     #("name", json.string(group.name)),
     #("position", json.int(group.position)),
+    #("is_collapsed", json.bool(group.is_collapsed)),
   ])
 }
 
@@ -58,7 +59,8 @@ pub fn category_group_decoder() -> decode.Decoder(CategoryGroup) {
   use id <- decode.field("id", decode.string)
   use name <- decode.field("name", decode.string)
   use position <- decode.field("position", decode.int)
-  decode.success(CategoryGroup(id:, name:, position:))
+  use is_collapsed <- decode.field("is_collapsed", decode.bool)
+  decode.success(CategoryGroup(id:, name:, position:, is_collapsed:))
 }
 
 pub type Category {
@@ -183,6 +185,7 @@ pub type AllocationForm {
 
 pub fn allocation_form_encode(af: AllocationForm) -> json.Json {
   json.object([
+    #("id", json.nullable(af.id, of: json.string)),
     #("amount", money_encode(af.amount)),
     #("category_id", json.string(af.category_id)),
     #("date", cycle_encode(af.date)),
