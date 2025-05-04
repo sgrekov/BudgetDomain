@@ -3,7 +3,6 @@ import gleam/dynamic/decode
 import gleam/int
 import gleam/json
 import gleam/option
-import gleam/result
 import gleam/string
 import rada/date as d
 
@@ -130,48 +129,6 @@ pub fn target_decoder() -> decode.Decoder(Target) {
 
 pub type MonthInYear {
   MonthInYear(month: Int, year: Int)
-}
-
-pub fn month_by_number(month: Int) -> d.Month {
-  case month {
-    1 -> d.Jan
-    2 -> d.Feb
-    3 -> d.Mar
-    4 -> d.Apr
-    5 -> d.May
-    6 -> d.Jun
-    7 -> d.Jul
-    8 -> d.Aug
-    9 -> d.Sep
-    10 -> d.Oct
-    11 -> d.Nov
-    12 -> d.Dec
-    _ -> d.Jan
-  }
-}
-
-pub fn from_date_string(date_str: String) -> Result(d.Date, String) {
-  d.from_iso_string(date_str)
-}
-
-fn date_to_month(d: d.Date) -> MonthInYear {
-  MonthInYear(d |> d.month_number, d |> d.year)
-}
-
-pub fn date_string_to_month(date_str: String) -> MonthInYear {
-  from_date_string(date_str)
-  |> result.map(fn(d) { date_to_month(d) })
-  |> result.unwrap(MonthInYear(0, 0))
-}
-
-pub fn month_in_year_to_str(month_in_year: MonthInYear) -> String {
-  let date2 =
-    d.from_calendar_date(
-      month_in_year.year,
-      month_by_number(month_in_year.month),
-      1,
-    )
-  d.format(date2, "yyyy-MM-dd")
 }
 
 pub fn month_decoder() -> decode.Decoder(MonthInYear) {
