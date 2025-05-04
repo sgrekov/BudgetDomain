@@ -3,6 +3,7 @@ import gleam/dynamic/decode
 import gleam/int
 import gleam/json
 import gleam/option
+import gleam/result
 import gleam/string
 import rada/date as d
 
@@ -129,6 +130,48 @@ pub fn target_decoder() -> decode.Decoder(Target) {
 
 pub type MonthInYear {
   MonthInYear(month: Int, year: Int)
+}
+
+pub fn month_by_number(month: Int) -> d.Month {
+  case month {
+    1 -> d.Jan
+    2 -> d.Feb
+    3 -> d.Mar
+    4 -> d.Apr
+    5 -> d.May
+    6 -> d.Jun
+    7 -> d.Jul
+    8 -> d.Aug
+    9 -> d.Sep
+    10 -> d.Oct
+    11 -> d.Nov
+    12 -> d.Dec
+    _ -> d.Jan
+  }
+}
+
+pub fn from_date_string(date_str: String) -> Result(d.Date, String) {
+  d.from_iso_string(date_str)
+}
+
+fn date_to_month(d: d.Date) -> MonthInYear {
+  MonthInYear(d |> d.month_number, d |> d.year)
+}
+
+pub fn date_string_to_month(date_str: String) -> MonthInYear {
+  from_date_string(date_str)
+  |> result.map(fn(d) { date_to_month(d) })
+  |> result.unwrap(MonthInYear(0, 0))
+}
+
+pub fn month_in_year_to_str(month_in_year: MonthInYear) -> String {
+  let date2 =
+    d.from_calendar_date(
+      month_in_year.year,
+      month_by_number(month_in_year.month),
+      1,
+    )
+  d.format(date2, "yyyy-MM-dd")
 }
 
 pub fn month_decoder() -> decode.Decoder(MonthInYear) {
@@ -307,6 +350,30 @@ pub fn calculate_current_cycle() -> Cycle {
   }
 }
 
+pub fn target_amount(target: option.Option(Target)) -> option.Option(Money) {
+  case target {
+    option.None -> option.None
+    option.Some(Custom(amount, _)) -> amount |> option.Some
+    option.Some(Monthly(amount)) -> amount |> option.Some
+  }
+}
+
+pub fn target_date(target: option.Option(Target)) -> option.Option(MonthInYear) {
+  case target {
+    option.None -> option.None
+    option.Some(Custom(_, date)) -> date |> option.Some
+    option.Some(Monthly(_)) -> option.None
+  }
+}
+
+pub fn is_target_custom(target: option.Option(Target)) -> Bool {
+  case target {
+    option.None -> False
+    option.Some(Custom(_, _)) -> True
+    option.Some(Monthly(_)) -> False
+  }
+}
+
 pub fn cycle_decrease(c: Cycle) -> Cycle {
   let mon_num = d.month_to_number(c.month)
   case mon_num {
@@ -372,11 +439,7 @@ pub fn money_to_string_no_sign(m: Money) -> String {
 }
 
 pub fn money_to_string_no_currency(m: Money) -> String {
-  let value = m.value |> int.absolute_value
-  sign_symbols(m)
-  <> value / 100 |> int.to_string
-  <> "."
-  <> value % 100 |> int.to_string
+  sign_symbols(m) <> money_to_string_no_sign(m)
 }
 
 pub fn money_with_currency_no_sign(m: Money) -> String {
