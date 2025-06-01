@@ -6,6 +6,60 @@ import gleam/option
 import gleam/string
 import rada/date as d
 
+pub type ImportTransaction {
+  ImportTransaction(
+    id: String,
+    date: d.Date,
+    payee: String,
+    transaction_type: String,
+    value: Money,
+    reference: String,
+  )
+}
+
+pub fn encode_import_transaction(
+  import_transaction: ImportTransaction,
+) -> json.Json {
+  let ImportTransaction(
+    id:,
+    date:,
+    payee:,
+    transaction_type:,
+    value:,
+    reference:,
+  ) = import_transaction
+  json.object([
+    #("id", json.string(id)),
+    #("date", d.to_rata_die(import_transaction.date) |> json.int),
+    #("payee", json.string(payee)),
+    #("transaction_type", json.string(transaction_type)),
+    #("value", money_encode(import_transaction.value)),
+    #("reference", json.string(reference)),
+  ])
+}
+
+pub fn import_transaction_decoder() -> decode.Decoder(ImportTransaction) {
+  use id <- decode.field("id", decode.string)
+  use date <- decode.field("date", decode.int)
+  use payee <- decode.field("payee", decode.string)
+  use transaction_type <- decode.field("transaction_type", decode.string)
+  use value <- decode.field("value", money_decoder())
+  use reference <- decode.field("reference", decode.string)
+  decode.success(ImportTransaction(
+    id,
+    d.from_rata_die(date),
+    payee,
+    transaction_type,
+    value,
+    reference,
+  ))
+}
+
+//"Booking Date","Value Date","Partner Name","Partner Iban",Type,"Payment Reference","Account Name","Amount (EUR)"
+//2025-05-28,2025-05-28,"For Budget",,"Credit Transfer",,FamilyMoney,3260.00,,,
+//2025-05-28,2025-05-28,"Main Account",,"Debit Transfer",,FamilyMoney,-100.00,,,
+//2025-05-28,2025-05-28,"Ekaterina Grekova",,"Debit Transfer",,FamilyMoney,-85.00,,,
+
 pub fn id_decoder() -> decode.Decoder(String) {
   {
     use id <- decode.field("id", decode.string)

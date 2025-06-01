@@ -1,5 +1,7 @@
 import budget_shared as m
+import gleam/int
 import gleam/result
+import gleam/string
 import rada/date as d
 
 pub fn to_date_string(value: d.Date) -> String {
@@ -10,8 +12,52 @@ pub fn to_date_string_input(value: d.Date) -> String {
   d.format(value, "yyyy-MM-dd")
 }
 
-pub fn from_date_string(date_str: String) -> Result(d.Date, String) {
-  d.from_iso_string(date_str)
+// pub fn from_date_string(date_str: String) -> Result(d.Date, String) {
+//   d.from_iso_string(date_str)
+// }
+
+pub fn string_to_date(date: String) -> Result(d.Date, String) {
+  date
+  |> string.split("-")
+  |> list_to_date
+}
+
+fn list_to_date(list: List(String)) -> Result(d.Date, String) {
+  // case list {
+  //   [year, month, day] ->
+  //     case int.base_parse(year, 10) {
+  //       Ok(y) -> {
+  //         case int.base_parse(month, 10) {
+  //           Ok(m_int) -> {
+  //             let month2 = month_by_number(m_int)
+  //             case int.base_parse(day, 10) {
+  //               Ok(d) -> Ok(d.from_calendar_date(y, month2, d))
+  //               _ -> Error("Invalid day")
+  //             }
+  //           }
+  //           _ -> Error("Invalid month")
+  //         }
+  //       }
+  //       _ -> Error("Invalid year")
+  //     }
+  //   _ -> Error("Invalid date format")
+  // }
+  case list {
+    [year, month, day] ->
+      int.base_parse(year, 10)
+      |> result.map_error(fn(_) { "Invalid year" })
+      |> result.try(fn(y) {
+        int.base_parse(month, 10)
+        |> result.map_error(fn(_) { "Invalid month" })
+        |> result.try(fn(m_int) {
+          let month2 = month_by_number(m_int)
+          int.base_parse(day, 10)
+          |> result.map_error(fn(_) { "Invalid day" })
+          |> result.map(fn(d) { d.from_calendar_date(y, month2, d) })
+        })
+      })
+    _ -> Error("Invalid date format")
+  }
 }
 
 pub fn month_to_name(month: d.Month) -> String {
@@ -71,7 +117,7 @@ fn date_to_month(d: d.Date) -> m.MonthInYear {
 }
 
 pub fn date_string_to_month(date_str: String) -> m.MonthInYear {
-  from_date_string(date_str)
+  string_to_date(date_str)
   |> result.map(fn(d) { date_to_month(d) })
   |> result.unwrap(m.MonthInYear(0, 0))
 }
