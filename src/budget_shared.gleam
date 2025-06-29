@@ -67,6 +67,13 @@ pub fn id_decoder() -> decode.Decoder(String) {
   }
 }
 
+pub fn hash_decoder() -> decode.Decoder(String) {
+  {
+    use id <- decode.field("hash", decode.string)
+    decode.success(id)
+  }
+}
+
 pub type User {
   User(id: String, name: String)
 }
