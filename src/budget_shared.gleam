@@ -1,15 +1,19 @@
 import gleam/dict
 import gleam/dynamic/decode
+import gleam/float
 import gleam/int
 import gleam/json
 import gleam/option
+import gleam/result
 import gleam/string
-import rada/date as d
+import gleam/time/calendar as cal
+import gleam/time/duration
+import gleam/time/timestamp as t
 
 pub type ImportTransaction {
   ImportTransaction(
     id: String,
-    date: d.Date,
+    date: t.Timestamp,
     payee: String,
     transaction_type: String,
     value: Money,
@@ -27,10 +31,10 @@ pub fn encode_import_transaction(
     transaction_type:,
     value:,
     reference:,
-  ) = import_transaction
+  ): ImportTransaction = import_transaction
   json.object([
     #("id", json.string(id)),
-    #("date", d.to_rata_die(import_transaction.date) |> json.int),
+    #("date", t.to_unix_seconds(import_transaction.date) |> json.float),
     #("payee", json.string(payee)),
     #("transaction_type", json.string(transaction_type)),
     #("value", money_encode(import_transaction.value)),
@@ -40,14 +44,14 @@ pub fn encode_import_transaction(
 
 pub fn import_transaction_decoder() -> decode.Decoder(ImportTransaction) {
   use id <- decode.field("id", decode.string)
-  use date <- decode.field("date", decode.int)
+  use date <- decode.field("date", decode.float)
   use payee <- decode.field("payee", decode.string)
   use transaction_type <- decode.field("transaction_type", decode.string)
   use value <- decode.field("value", money_decoder())
   use reference <- decode.field("reference", decode.string)
   decode.success(ImportTransaction(
     id,
-    d.from_rata_die(date),
+    t.from_unix_seconds(date |> float.round),
     payee,
     transaction_type,
     value,
@@ -163,7 +167,7 @@ pub fn category_encode(cat: Category) -> json.Json {
 
 pub type Target {
   Monthly(target: Money)
-  Custom(target: Money, date: MonthInYear)
+  Custom(target: Money, date: cal.Date)
 }
 
 pub fn target_decoder() -> decode.Decoder(Target) {
@@ -188,15 +192,15 @@ pub fn target_decoder() -> decode.Decoder(Target) {
   target_decoder
 }
 
-pub type MonthInYear {
-  MonthInYear(month: Int, year: Int)
-}
-
-pub fn month_decoder() -> decode.Decoder(MonthInYear) {
+pub fn month_decoder() -> decode.Decoder(cal.Date) {
   {
-    use month <- decode.field("month", decode.int)
+    use month_int <- decode.field("month", decode.int)
     use year <- decode.field("year", decode.int)
-    decode.success(MonthInYear(month, year))
+    decode.success(cal.Date(
+      year,
+      month_int |> cal.month_from_int |> result.unwrap(cal.January),
+      1,
+    ))
   }
 }
 
@@ -256,7 +260,7 @@ pub fn allocation_form_encode(af: AllocationForm) -> json.Json {
 pub fn cycle_encode(cycle: Cycle) -> json.Json {
   json.object([
     #("year", json.int(cycle.year)),
-    #("month", cycle.month |> d.month_to_number |> json.int),
+    #("month", cycle.month |> cal.month_to_int |> json.int),
   ])
 }
 
@@ -276,9 +280,9 @@ pub fn target_encode(target: Target) -> json.Json {
   }
 }
 
-pub fn month_in_year_encode(month: MonthInYear) -> json.Json {
+pub fn month_in_year_encode(month: cal.Date) -> json.Json {
   json.object([
-    #("month", json.int(month.month)),
+    #("month", json.int(month.month |> cal.month_to_int)),
     #("year", json.int(month.year)),
   ])
 }
@@ -288,14 +292,17 @@ pub fn money_encode(money: Money) -> json.Json {
 }
 
 pub type Cycle {
-  Cycle(year: Int, month: d.Month)
+  Cycle(year: Int, month: cal.Month)
 }
 
 pub fn cycle_decoder() -> decode.Decoder(Cycle) {
   let cycle_decoder = {
     use month <- decode.field("month", decode.int)
     use year <- decode.field("year", decode.int)
-    decode.success(Cycle(year, month |> d.number_to_month))
+    decode.success(Cycle(
+      year,
+      month |> cal.month_from_int |> result.unwrap(cal.January),
+    ))
   }
   cycle_decoder
 }
@@ -303,7 +310,7 @@ pub fn cycle_decoder() -> decode.Decoder(Cycle) {
 pub type Transaction {
   Transaction(
     id: String,
-    date: d.Date,
+    date: t.Timestamp,
     payee: String,
     category_id: String,
     value: Money,
@@ -321,7 +328,7 @@ pub fn transaction_decoder() -> decode.Decoder(Transaction) {
     use user_id <- decode.field("user_id", decode.string)
     decode.success(Transaction(
       id,
-      d.from_rata_die(date),
+      t.from_unix_seconds(date),
       payee,
       category_id,
       value,
@@ -333,7 +340,7 @@ pub fn transaction_decoder() -> decode.Decoder(Transaction) {
 pub fn transaction_encode(t: Transaction) -> json.Json {
   json.object([
     #("id", json.string(t.id)),
-    #("date", d.to_rata_die(t.date) |> json.int),
+    #("date", t.to_unix_seconds(t.date) |> float.round |> json.int),
     #("payee", json.string(t.payee)),
     #("category_id", json.string(t.category_id)),
     #("value", money_encode(t.value)),
@@ -359,10 +366,11 @@ pub fn money_sum(a: Money, b: Money) -> Money {
 }
 
 pub fn calculate_current_cycle() -> Cycle {
-  let today = d.today()
+  let today = t.system_time()
+  let #(today_date, _) = t.to_calendar(today, cal.utc_offset)
   let last_day = 26
-  let cycle = Cycle(d.year(today), today |> d.month)
-  case d.day(today) > last_day {
+  let cycle = Cycle(today_date.year, today_date.month)
+  case today_date.day > last_day {
     False -> cycle
     True -> cycle_increase(cycle)
   }
@@ -376,7 +384,7 @@ pub fn target_amount(target: option.Option(Target)) -> option.Option(Money) {
   }
 }
 
-pub fn target_date(target: option.Option(Target)) -> option.Option(MonthInYear) {
+pub fn target_date(target: option.Option(Target)) -> option.Option(cal.Date) {
   case target {
     option.None -> option.None
     option.Some(Custom(_, date)) -> date |> option.Some
@@ -393,18 +401,26 @@ pub fn is_target_custom(target: option.Option(Target)) -> Bool {
 }
 
 pub fn cycle_decrease(c: Cycle) -> Cycle {
-  let mon_num = d.month_to_number(c.month)
+  let mon_num = cal.month_to_int(c.month)
   case mon_num {
-    1 -> Cycle(c.year - 1, d.Dec)
-    _ -> Cycle(c.year, d.number_to_month(mon_num - 1))
+    1 -> Cycle(c.year - 1, cal.December)
+    _ ->
+      Cycle(
+        c.year,
+        cal.month_from_int(mon_num - 1) |> result.unwrap(cal.January),
+      )
   }
 }
 
 pub fn cycle_increase(c: Cycle) -> Cycle {
-  let mon_num = d.month_to_number(c.month)
+  let mon_num = cal.month_to_int(c.month)
   case mon_num {
-    12 -> Cycle(c.year + 1, d.Jan)
-    _ -> Cycle(c.year, d.number_to_month(mon_num + 1))
+    12 -> Cycle(c.year + 1, cal.January)
+    _ ->
+      Cycle(
+        c.year,
+        cal.month_from_int(mon_num + 1) |> result.unwrap(cal.January),
+      )
   }
 }
 
