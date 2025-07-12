@@ -7,7 +7,6 @@ import gleam/option
 import gleam/result
 import gleam/string
 import gleam/time/calendar as cal
-import gleam/time/duration
 import gleam/time/timestamp as t
 
 pub type ImportTransaction {
@@ -34,10 +33,10 @@ pub fn encode_import_transaction(
   ): ImportTransaction = import_transaction
   json.object([
     #("id", json.string(id)),
-    #("date", t.to_unix_seconds(import_transaction.date) |> json.float),
+    #("date", t.to_unix_seconds(date) |> json.float),
     #("payee", json.string(payee)),
     #("transaction_type", json.string(transaction_type)),
-    #("value", money_encode(import_transaction.value)),
+    #("value", money_encode(value)),
     #("reference", json.string(reference)),
   ])
 }
