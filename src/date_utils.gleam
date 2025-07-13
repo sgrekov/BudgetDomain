@@ -1,4 +1,3 @@
-import budget_shared as m
 import gleam/int
 import gleam/order
 import gleam/result
@@ -44,6 +43,10 @@ pub fn date_to_timestamp(date: cal.Date) -> t.Timestamp {
 pub fn timestamp_date_to_string(ts: t.Timestamp) -> String {
   let #(date, _) = t.to_calendar(ts, cal.utc_offset)
   to_date_string(date)
+}
+
+pub fn timestamp_to_date_string_input(t: t.Timestamp) -> String {
+  t |> timestamp_to_date |> to_date_string_input
 }
 
 // pub fn from_date_string(date_str: String) -> Result(d.Date, String) {
@@ -111,7 +114,7 @@ pub fn is_between(d: cal.Date, start: cal.Date, end: cal.Date) -> Bool {
   let start_t = start |> date_to_timestamp
   let end_date_t = end |> date_to_timestamp
 
-  case t.compare(start_t, t) {
+  case t.compare(t, start_t) {
     order.Eq | order.Gt ->
       case t.compare(t, end_date_t) {
         order.Eq | order.Lt -> True

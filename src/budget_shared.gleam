@@ -1,3 +1,4 @@
+import date_utils
 import gleam/dict
 import gleam/dynamic/decode
 import gleam/float
@@ -17,6 +18,8 @@ pub type ImportTransaction {
     transaction_type: String,
     value: Money,
     reference: String,
+    hash: String,
+    is_imported: Bool,
   )
 }
 
@@ -30,7 +33,10 @@ pub fn encode_import_transaction(
     transaction_type:,
     value:,
     reference:,
+    hash:,
+    is_imported:,
   ): ImportTransaction = import_transaction
+  let h = transaction_hash(date_utils.timestamp_to_date(date), payee, value)
   json.object([
     #("id", json.string(id)),
     #("date", t.to_unix_seconds(date) |> json.float),
@@ -38,23 +44,43 @@ pub fn encode_import_transaction(
     #("transaction_type", json.string(transaction_type)),
     #("value", money_encode(value)),
     #("reference", json.string(reference)),
+    #("hash", json.string(h)),
+    #("is_imported", json.bool(is_imported)),
   ])
+}
+
+pub fn transaction_hash(date: cal.Date, payee: String, value: Money) -> String {
+  let date_str = date_utils.to_date_string(date)
+  let value_str = money_to_string(value)
+  let hash_input = date_str <> payee <> value_str
+  // echo "hash_input:" <> hash_input
+  hash_input
+  // crypto.hash(crypto.Sha256, <<hash_input:utf8>>)
+  // crypto.hash(crypto.Sha256, bit_array.from_string(hash_input))
+  // |> echo
+  // |> bit_array.to_string
+  // |> echo
+  // |> result.unwrap("")
 }
 
 pub fn import_transaction_decoder() -> decode.Decoder(ImportTransaction) {
   use id <- decode.field("id", decode.string)
-  use date <- decode.field("date", decode.float)
+  use date <- decode.field("date", decode.int)
   use payee <- decode.field("payee", decode.string)
   use transaction_type <- decode.field("transaction_type", decode.string)
   use value <- decode.field("value", money_decoder())
   use reference <- decode.field("reference", decode.string)
+  use hash <- decode.field("hash", decode.string)
+  use is_imported <- decode.field("is_imported", decode.bool)
   decode.success(ImportTransaction(
     id,
-    t.from_unix_seconds(date |> float.round),
+    t.from_unix_seconds(date),
     payee,
     transaction_type,
     value,
     reference,
+    hash,
+    is_imported,
   ))
 }
 
@@ -314,6 +340,7 @@ pub type Transaction {
     category_id: String,
     value: Money,
     user_id: String,
+    import_hash: String,
   )
 }
 
@@ -325,6 +352,7 @@ pub fn transaction_decoder() -> decode.Decoder(Transaction) {
     use category_id <- decode.field("category_id", decode.string)
     use value <- decode.field("value", money_decoder())
     use user_id <- decode.field("user_id", decode.string)
+    use import_hash <- decode.field("import_hash", decode.string)
     decode.success(Transaction(
       id,
       t.from_unix_seconds(date),
@@ -332,6 +360,7 @@ pub fn transaction_decoder() -> decode.Decoder(Transaction) {
       category_id,
       value,
       user_id,
+      import_hash,
     ))
   }
 }
@@ -344,6 +373,7 @@ pub fn transaction_encode(t: Transaction) -> json.Json {
     #("category_id", json.string(t.category_id)),
     #("value", money_encode(t.value)),
     #("user_id", json.string(t.user_id)),
+    #("import_hash", json.string(t.import_hash)),
   ])
 }
 
