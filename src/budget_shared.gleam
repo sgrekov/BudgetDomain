@@ -468,15 +468,11 @@ pub fn string_to_money(raw: String) -> Money {
   }
   case string.replace(s, ",", ".") |> string.split(".") {
     [s, b, ..] -> {
-      // io.debug("s: " <> s)
-      // io.debug("b: " <> b)
       case
         int.parse(s),
         b |> string.pad_end(2, "0") |> string.slice(0, 2) |> int.parse
       {
         Ok(s), Ok(b) -> {
-          // io.debug("s2: " <> s |> int.to_string)
-          // io.debug("b2: " <> b |> int.to_string)
           Money(is_neg * { s * 100 + b })
         }
         _, _ -> Money(0)
